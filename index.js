@@ -687,6 +687,6 @@ app.post("/api/loadComments", async (req, res) => {
     res.end;
 });
 
-app.listen(5000, () => {
+app.listen(8080, () => {
     console.log("Server running");
 });

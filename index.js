@@ -530,9 +530,11 @@ app.post("/api/changeVisibleName", authenticateToken, (req, res) => {
     const author = req.payload.id;
     var errors = false;
 
-    pool.query(`UPDATE users SET visible_name = ? WHERE id = ? LIMIT 1;`, [newVisibleName, author], (error, result) => {
-        if (error) errors = true;
-    });
+    if (newVisibleName !== "") {
+        pool.query(`UPDATE users SET visible_name = ? WHERE id = ? LIMIT 1;`, [newVisibleName, author], (error, result) => {
+            if (error) errors = true;
+        });
+    }
 
     res.json({
         message: errors ? "error" : "done"

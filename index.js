@@ -570,15 +570,31 @@ app.post("/api/deletePost", authenticateToken, async (req, res) => {
     const result = await getQueryResult(`SELECT posts.id, posts.author, users.username FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id = ? AND users.username = ?;`, [postId, username]); 
     
     if (result.length !== 0) {
-        pool.getConnection((error, connection) => {
-            if(error) throw error;
-    
-            connection.query("DELETE FROM posts WHERE id = ?;", [postId], (err, result) => {
-                if (err) console.log(err);
-    
-                connection.release();
-            });
+
+        // DELETE POST LIKES
+        pool.query("DELETE FROM likes WHERE postId = ?;", [postId], (err, result) => {
+            if (err) console.log(err);
         });
+
+        // DELETE POST COMMENTS
+        pool.query("DELETE FROM comments WHERE postId = ?;", [postId], (err, result) => {
+            if (err) console.log(err);
+        });
+
+        // DELETE POST
+        pool.query("DELETE FROM posts WHERE id = ?;", [postId], (err, result) => {
+            if (err) console.log(err);
+        });
+
+        // pool.getConnection((error, connection) => {
+        //     if(error) throw error;
+    
+        //     connection.query("DELETE FROM posts WHERE id = ?;", [postId], (err, result) => {
+        //         if (err) console.log(err);
+    
+        //     });
+        //     connection.release();
+        // });
     }
 
     res.json("POST DELETED");

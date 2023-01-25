@@ -244,7 +244,7 @@ app.post("/api/auth/register", (req, res) => {
 
                                     // CREATE EMAIL TOKEN & SEND IT TO USER'S MAIL
                                     jwt.sign({ username: username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
-                                        const url = `${process.env.BACKEND_SERVER}/api/confirmation/${emailToken}`;
+                                        const url = `http://bangerify.com/api/confirmation/${emailToken}`;
 
                                         // SEND EMAIL
                                         sendEmail(email, url);
@@ -422,7 +422,7 @@ app.post("/api/confirmation/resendVerificationToken", async (req, res) => {
 
         // IF TRUE CREATE EMAIL TOKEN & SEND IT TO USER'S MAIL
         jwt.sign({ username: result[0]?.username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
-            const url = `${process.env.BACKEND_SERVER}/api/confirmation/${emailToken}`;
+            const url = `http://bangerify.com/api/confirmation/${emailToken}`;
 
             // SEND EMAIL
             sendEmail(email, url);

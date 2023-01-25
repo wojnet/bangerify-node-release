@@ -21,7 +21,11 @@ const usernameRegex = /^[a-z0-9_.]+$/;
 const passwordRegex = /^[A-Za-z0-9]\w{7,}$/;
 
 // AWS CONFIG
-AWS.config.update({ region: 'eu-central-1' });
+AWS.config.update({
+    accessKeyId: process.env.aws_access_key_id,
+    secretAccessKey: process.env.aws_secret_access_key,
+    region: 'eu-central-1'
+});
 
 const transporter = nodemailer.createTransport({
     service: "Hotmail",

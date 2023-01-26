@@ -448,7 +448,7 @@ app.post("/api/userData/:username", async (req, res) => {
 app.post("/api/getPosts", async (req, res) => {
     const { lastPostId } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 10;`;
+    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);
@@ -462,7 +462,7 @@ app.post("/api/getPosts", async (req, res) => {
 app.post("/api/getPostsMostLiked", async (req, res) => {
     const { lastPostId } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 10;`;
+    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);
@@ -479,10 +479,10 @@ app.post("/api/getUserPosts", async (req, res) => {
     var query = "";
     switch(order ? order : "") {
         case 0:
-            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 10;`;
+            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;`;
             break;
         default:
-            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 10;`;
+            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;`;
             break;
     }
 

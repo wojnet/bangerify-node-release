@@ -6,7 +6,6 @@ const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const emailValidator = require("email-validator");
-const nodemailer = require("nodemailer");
 const AWS =  require("aws-sdk");
 const app = express();
 
@@ -25,14 +24,6 @@ AWS.config.update({
     accessKeyId: process.env.aws_access_key_id,
     secretAccessKey: process.env.aws_secret_access_key,
     region: 'eu-central-1'
-});
-
-const transporter = nodemailer.createTransport({
-    service: "Hotmail",
-    auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD
-    }
 });
 
 const pool = mysql.createPool({
@@ -54,6 +45,7 @@ pool.on('connection', connection => {
     });
 });
 
+//MIDDLEWARE FOR ENDPOINTS THAT NEEDS USER AUTHENTICATION (LIKE DELETE POST)
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(" ")[1];
@@ -67,6 +59,9 @@ const authenticateToken = (req, res, next) => {
     });
 }
 
+
+//* TOOOOOOKENS
+
 var refreshTokens = [];
 
 const generateAccessToken = (_id, _username, _rank) => {
@@ -77,16 +72,8 @@ const generateRefreshToken = (_id, _username, _rank) => {
     return jwt.sign({ id: _id, username: _username, rank: _rank }, process.env.REFRESH_TOKEN_SECRET);
 }
 
+
 const sendEmail = (_email, _url) => {
-    // ! OLD WAY
-    // transporter.sendMail({
-    //     from: process.env.EMAIL_USERNAME,
-    //     to: _email,
-    //     subject: "Bangerify email verification",
-    //     text: "Please verify your email by clicking link: \n" + _url
-    // }, (err, info) => {
-    //     if(err) console.log(err);
-    // });
 
     let params = {
         Destination: {
@@ -120,11 +107,12 @@ const sendEmail = (_email, _url) => {
     .catch(err => {
         console.log(err, err.stack);
     });
-
 }
+
 
 //* ENDPOINTS
 
+// LOL
 app.get("/api/test", authenticateToken, (req, res) => {
     const date = new Date();
     res.json("Welcome back " + req.payload.username + ", its " + date.getMinutes() + ":" + date.getSeconds());
@@ -200,7 +188,6 @@ app.post("/api/auth/register", (req, res) => {
     // VALIDATE PASSWORD
     if (!passwordRegex.test(password)) isPasswordValid = false;
 
-    // JEŻELI COŚ ZAWIEDZIE TO WYWAL BŁĄD
     if (!isUsernameValid || !isEmailValid || !isPasswordValid) {
         res.json({
             message: "validation error",
@@ -245,8 +232,6 @@ app.post("/api/auth/register", (req, res) => {
                                     // CREATE EMAIL TOKEN & SEND IT TO USER'S MAIL
                                     jwt.sign({ username: username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
                                         const url = `http://3.71.193.242:8080/api/confirmation/${emailToken}`;
-
-                                        // SEND EMAIL
                                         sendEmail(email, url);
                                     });
 
@@ -288,9 +273,9 @@ app.post("/api/auth/register", (req, res) => {
 });
 
 app.post("/api/auth/login", (req, res) => {
-
     const { username, password } = req.body;
 
+    // VALIDITY FOR SQL INJECTION PREVENTION 
     if (usernameRegex.test(username) && passwordRegex.test(password)) {
         pool.getConnection((error, connection) => {
             if(error) throw error;
@@ -301,8 +286,8 @@ app.post("/api/auth/login", (req, res) => {
                     res.sendStatus(401); //! UGH
     
                 } else {
+                    // IF USER FOUND
                     if (Array.from(result).length === 1) {
-                        //JEŻELI ZNALEZIONO UŻYTKOWNIKA
                         const passwordHash = crypto.createHash("sha256").update(password+result[0].password_salt, "utf-8").digest("hex");
                         
                         if(result[0].password_hash === passwordHash) {
@@ -432,7 +417,6 @@ app.post("/api/confirmation/resendVerificationToken", async (req, res) => {
     }
 });
 
-
 app.post("/api/userData/:username", async (req, res) => {
     const username = req.params.username;
 
@@ -459,6 +443,8 @@ app.post("/api/getPosts", async (req, res) => {
     }
 });
 
+
+// ! NOT DONE YET
 app.post("/api/getPostsMostLiked", async (req, res) => {
     const { lastPostId } = req.body;
 
@@ -474,17 +460,9 @@ app.post("/api/getPostsMostLiked", async (req, res) => {
 });
 
 app.post("/api/getUserPosts", async (req, res) => {
-    const { lastPostId, order, author } = req.body;
+    const { lastPostId, author } = req.body;
 
-    var query = "";
-    switch(order ? order : "") {
-        case 0:
-            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;`;
-            break;
-        default:
-            query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;`;
-            break;
-    }
+    var query = "SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;";
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999, author]);
@@ -511,7 +489,7 @@ app.post("/api/changeBio", authenticateToken, (req, res) => {
 });
 
 app.post("/api/changeProfilePictureUrl", authenticateToken, (req, res) => {
-    const newURL = req.body.newURL;
+    const { newURL } = req.body;
     const author = req.payload.id;
     var errors = false;
 
@@ -544,9 +522,6 @@ app.post("/api/changeVisibleName", authenticateToken, (req, res) => {
 
 
 app.post("/api/createPost", authenticateToken, (req, res) => {
-    // const author = req.payload.id;
-    // const text = req.body.post;
-
 
     pool.getConnection((error, connection) => {
         if(error) throw error;
@@ -571,12 +546,12 @@ app.post("/api/deletePost", authenticateToken, async (req, res) => {
     
     if (result.length !== 0) {
 
-        // DELETE POST LIKES
+        // DELETE LIKES OF THAT POST
         pool.query("DELETE FROM likes WHERE postId = ?;", [postId], (err, result) => {
             if (err) console.log(err);
         });
 
-        // DELETE POST COMMENTS
+        // DELETE COMMENTS OF THAT POST
         pool.query("DELETE FROM comments WHERE postId = ?;", [postId], (err, result) => {
             if (err) console.log(err);
         });
@@ -585,16 +560,6 @@ app.post("/api/deletePost", authenticateToken, async (req, res) => {
         pool.query("DELETE FROM posts WHERE id = ?;", [postId], (err, result) => {
             if (err) console.log(err);
         });
-
-        // pool.getConnection((error, connection) => {
-        //     if(error) throw error;
-    
-        //     connection.query("DELETE FROM posts WHERE id = ?;", [postId], (err, result) => {
-        //         if (err) console.log(err);
-    
-        //     });
-        //     connection.release();
-        // });
     }
 
     res.json("POST DELETED");
@@ -696,7 +661,6 @@ app.post("/api/loadLikes", async (req, res) => {
 app.post("/api/loadComments", async (req, res) => {
     const { postId } = req.body;
 
-    // COUNT COMMENTS
     const comments = await getQueryResult(`SELECT comments.id, comments.text, comments.userId, comments.date, users.profilePictureUrl, users.username, users.visible_name, users.grade FROM comments INNER JOIN users ON comments.userId = users.id WHERE postId = ?;`, [postId]);
 
     res.json({

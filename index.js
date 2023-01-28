@@ -634,17 +634,18 @@ app.post("/api/deleteComment", authenticateToken, async (req, res) => {
     res.end();
 });
 
-app.post("/api/checkIfLiked", authenticateToken, async (req, res) => {
-    const { postId } = req.body;
-    const { id } = req.payload;
+//! OLD WAY
+// app.post("/api/checkIfLiked", authenticateToken, async (req, res) => {
+//     const { postId } = req.body;
+//     const { id } = req.payload;
 
-    const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [id, postId]);
+//     const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [id, postId]);
 
-    res.json({
-        liked: userLiked[0]?.count
-    });
-    res.end();
-});
+//     res.json({
+//         liked: userLiked[0]?.count
+//     });
+//     res.end();
+// });
 
 app.post("/api/loadLikes", async (req, res) => {
     const { postId } = req.body;
@@ -653,6 +654,22 @@ app.post("/api/loadLikes", async (req, res) => {
         if (error) console.log(error);
         res.json({ 
             likes: result[0]?.likes
+        });
+        res.end;
+    });
+});
+
+app.post("/api/loadLikesAuth", authenticateToken, async (req, res) => {
+    const { postId } = req.body;
+    const { id } = req.payload;
+
+    const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [id, postId]);
+
+    pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
+        if (error) console.log(error);
+        res.json({ 
+            likes: result[0]?.likes,
+            liked: userLiked[0]?.count
         });
         res.end;
     });

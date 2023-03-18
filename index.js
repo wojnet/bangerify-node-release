@@ -3,10 +3,10 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const mysql = require("mysql");
 const dotenv = require("dotenv");
-const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const emailValidator = require("email-validator");
-const AWS =  require("aws-sdk");
+const AWS = require("aws-sdk");
 const app = express();
 
 dotenv.config({ path: "./.env" });
@@ -24,6 +24,15 @@ AWS.config.update({
     accessKeyId: process.env.aws_access_key_id,
     secretAccessKey: process.env.aws_secret_access_key,
     region: 'eu-central-1'
+});
+
+const mediaBucketName = "bangerify-media";
+
+const mediaBucket = new AWS.S3({
+    region: "eu-central-1",
+    accessKeyId: process.env.aws_access_key_id_media,
+    secretAccessKey: process.env.aws_secret_access_key_media,
+    signatureVersion: 'v4'
 });
 
 const pool = mysql.createPool({
@@ -59,6 +68,37 @@ const authenticateToken = (req, res, next) => {
     });
 }
 
+const generateUploadURL = async () => {
+    const rawBytes = await crypto.randomBytes(16);
+    const imageName = rawBytes.toString("hex");
+
+    const params = ({
+        Bucket: mediaBucketName,
+        Key: imageName,
+        Expires: 60
+    });
+
+    const uploadUrl = await mediaBucket.getSignedUrlPromise("putObject", params);
+    return uploadUrl;
+}
+
+const deleteS3Files = async (_files = []) => {
+    _files.forEach((key) => {
+
+        const params = ({
+            Bucket: mediaBucketName,
+            Key: key
+        });
+    
+        mediaBucket.deleteObject(params, (error, data) => {
+            if (error) {
+                return "ERROR";
+            }
+        });
+    });
+
+    return "DELETED";
+}
 
 //* TOOOOOOKENS
 
@@ -432,7 +472,7 @@ app.post("/api/userData/:username", async (req, res) => {
 app.post("/api/getPosts", async (req, res) => {
     const { lastPostId } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
+    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);
@@ -448,7 +488,7 @@ app.post("/api/getPosts", async (req, res) => {
 app.post("/api/getPostsMostLiked", async (req, res) => {
     const { lastPostId } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
+    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);
@@ -462,7 +502,7 @@ app.post("/api/getPostsMostLiked", async (req, res) => {
 app.post("/api/getUserPosts", async (req, res) => {
     const { lastPostId, author } = req.body;
 
-    var query = "SELECT posts.id, posts.text, posts.date, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;";
+    var query = "SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;";
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999, author]);
@@ -520,13 +560,23 @@ app.post("/api/changeVisibleName", authenticateToken, (req, res) => {
     res.end();
 });
 
+app.get("/api/s3Url", authenticateToken, async (req, res) => {
+    const url = await generateUploadURL();
+    res.json({ url });
+    res.end();
+});
 
 app.post("/api/createPost", authenticateToken, (req, res) => {
+
+    const { postData, images } = req.body;
+    const imagesArrayString = JSON.stringify(images);
+
+    console.log(images);
 
     pool.getConnection((error, connection) => {
         if(error) throw error;
 
-        connection.query(`INSERT INTO posts (author, text) VALUES (?, ?);`, [req.payload.id, req.body.postData.post], (err, result) => {
+        connection.query(`INSERT INTO posts (author, text, images) VALUES (?, ?, '${imagesArrayString}');`, [req.payload.id, postData.post], (err, result) => {
             if(err) {
                 console.log(err);
             }
@@ -536,7 +586,7 @@ app.post("/api/createPost", authenticateToken, (req, res) => {
         connection.release();
         res.end();
     });
-;})
+});
 
 app.post("/api/deletePost", authenticateToken, async (req, res) => {
     const { postId } = req.body;
@@ -545,6 +595,11 @@ app.post("/api/deletePost", authenticateToken, async (req, res) => {
     const result = await getQueryResult(`SELECT posts.id, posts.author, users.username FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id = ? AND users.username = ?;`, [postId, username]); 
     
     if (result.length !== 0) {
+        
+        const imagesResult = await getQueryResult("SELECT images FROM posts WHERE posts.id = ? LIMIT 1;", [postId]);
+        const imagesArray = JSON.parse(imagesResult[0].images).map(e => e.split(".com/")[1]);
+
+        const deletedResult = await deleteS3Files(imagesArray);
 
         // DELETE LIKES OF THAT POST
         pool.query("DELETE FROM likes WHERE postId = ?;", [postId], (err, result) => {

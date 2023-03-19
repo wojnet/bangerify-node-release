@@ -100,6 +100,21 @@ const deleteS3Files = async (_files = []) => {
     return "DELETED";
 }
 
+const deleteS3File = async (_file = "") => {
+    const params = ({
+        Bucket: mediaBucketName,
+        Key: _file
+    });
+
+    mediaBucket.deleteObject(params, (error, data) => {
+        if (error) {
+            return "ERROR";
+        }
+    });
+
+    return "DELETED";
+}
+
 //* TOOOOOOKENS
 
 var refreshTokens = [];
@@ -528,10 +543,15 @@ app.post("/api/changeBio", authenticateToken, (req, res) => {
     res.end();
 });
 
-app.post("/api/changeProfilePictureUrl", authenticateToken, (req, res) => {
+app.post("/api/changeProfilePictureUrl", authenticateToken, async (req, res) => {
     const { newURL } = req.body;
     const author = req.payload.id;
     var errors = false;
+
+    const imageResult = await getQueryResult("SELECT profilePictureUrl FROM users WHERE id = ? LIMIT 1;", [author]);
+    const imageKey = imageResult[0].profilePictureUrl.split(".com/")[1];
+
+    const deletedResult = await deleteS3File(imageKey);
 
     pool.query(`UPDATE users SET profilePictureUrl = ? WHERE id = ? LIMIT 1;`, [newURL, author], (error, result) => {
         if (error) errors = true;
@@ -597,9 +617,9 @@ app.post("/api/deletePost", authenticateToken, async (req, res) => {
     if (result.length !== 0) {
         
         const imagesResult = await getQueryResult("SELECT images FROM posts WHERE posts.id = ? LIMIT 1;", [postId]);
-        const imagesArray = JSON.parse(imagesResult[0].images).map(e => e.split(".com/")[1]);
+        const imageKeyArray = JSON.parse(imagesResult[0].images).map(e => e.split(".com/")[1]);
 
-        const deletedResult = await deleteS3Files(imagesArray);
+        const deletedResult = await deleteS3Files(imageKeyArray);
 
         // DELETE LIKES OF THAT POST
         pool.query("DELETE FROM likes WHERE postId = ?;", [postId], (err, result) => {

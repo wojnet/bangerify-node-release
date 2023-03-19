@@ -549,9 +549,10 @@ app.post("/api/changeProfilePictureUrl", authenticateToken, async (req, res) => 
     var errors = false;
 
     const imageResult = await getQueryResult("SELECT profilePictureUrl FROM users WHERE id = ? LIMIT 1;", [author]);
-    const imageKey = imageResult[0].profilePictureUrl.split(".com/")[1];
-
-    const deletedResult = await deleteS3File(imageKey);
+    if (imageResult[0].profilePictureUrl !== null && imageResult[0].profilePictureUrl !== "") {
+        const imageKey = imageResult[0].profilePictureUrl.split(".com/")[1];
+        const deletedResult = await deleteS3File(imageKey);
+    }
 
     pool.query(`UPDATE users SET profilePictureUrl = ? WHERE id = ? LIMIT 1;`, [newURL, author], (error, result) => {
         if (error) errors = true;

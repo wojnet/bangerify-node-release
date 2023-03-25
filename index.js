@@ -528,17 +528,23 @@ app.post("/api/getUserPosts", async (req, res) => {
     }
 });
 
-app.post("/api/changeBio", authenticateToken, (req, res) => {
+app.post("/api/changeBio", authenticateToken, async (req, res) => {
     const newBio = req.body.newBio;
     const author = req.payload.id;
-    var errors = false;
+    var message = "done";
 
-    pool.query(`UPDATE users SET bio = ? WHERE id = ? LIMIT 1;`, [newBio, author], (error) => {
-        if (error) errors = true;
-    });
+    const result = await getQueryResult("SELECT banStatus FROM users WHERE id = ? LIMIT 1;", [author]);
+
+    if (result[0].banStatus === 0) {
+        pool.query(`UPDATE users SET bio = ? WHERE id = ? LIMIT 1;`, [newBio, author], (error) => {
+            if (error) message = "error";
+        });
+    } else {
+        message = "banned";
+    }
 
     res.json({
-        message: errors ? "error" : "done"
+        message: message
     });
     res.end();
 });

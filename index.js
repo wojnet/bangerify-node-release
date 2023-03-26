@@ -329,13 +329,14 @@ app.post("/api/auth/register", (req, res) => {
 
 app.post("/api/auth/login", (req, res) => {
     const { username, password } = req.body;
+    const loginType = emailValidator.validate(username) ? "email" : "username";
 
     // VALIDITY FOR SQL INJECTION PREVENTION 
-    if (usernameRegex.test(username) && passwordRegex.test(password)) {
+    if (usernameRegex.test(loginType === "email" ? "sampleusername" : username) && passwordRegex.test(password)) {
         pool.getConnection((error, connection) => {
             if(error) throw error;
     
-            connection.query("SELECT id, username, confirmedEmail, password_hash, password_salt, grade FROM users WHERE username = ? LIMIT 1;", [username], (err, result) => {
+            connection.query(`SELECT id, ${loginType === "username" ? "username" : "username, email"}, confirmedEmail, password_hash, password_salt, grade FROM users WHERE ${loginType === "username" ? "username" : "email"} = ? LIMIT 1;`, [username], (err, result) => {
                 if (err) {
                     console.log(err);
                     res.sendStatus(401); //! UGH

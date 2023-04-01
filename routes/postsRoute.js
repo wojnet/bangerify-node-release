@@ -15,7 +15,7 @@ const router = express.Router();
 router.post("/getPosts", async (req, res) => {
     const { lastPostId } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 50;`;
+    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 15;`;
 
     try {
         const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);

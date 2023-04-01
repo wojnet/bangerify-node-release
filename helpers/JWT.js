@@ -5,7 +5,7 @@ const dotenv = require("dotenv").config({ path: path.resolve(__dirname, "../.env
 var refreshTokens = [];
 
 const generateAccessToken = (_id, _username, _rank) => {
-    return jwt.sign({ id: _id, username: _username, rank: _rank }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1m" });
+    return jwt.sign({ id: _id, username: _username, rank: _rank }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "30s" });
 }
 
 const generateRefreshToken = (_id, _username, _rank) => {

@@ -11,10 +11,11 @@ const { pool } = require("../helpers/mysql");
 const { sendEmail } = require("../helpers/email");
 const { usernameRegex, passwordRegex } = require("../helpers/validation");
 const { authenticateToken,
-        refreshTokens,
         generateAccessToken,
         generateRefreshToken,
-        setRefreshTokensArray }
+        setRefreshTokensArray, 
+        getRefreshTokensArray, 
+        refreshTokens}
         = require("../helpers/JWT");
 
 const router = express.Router();
@@ -124,7 +125,10 @@ router.post("/register", (req, res) => {
 });
 
 //? LOGIN
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
+    var refreshTokens = [];
+    refreshTokens = await getRefreshTokensArray();
+    
     const { username, password } = req.body;
     const loginType = emailValidator.validate(username) ? "email" : "username";
 
@@ -196,7 +200,9 @@ router.post("/login", (req, res) => {
 });
 
 //? LOGOUT
-router.post("/logout", authenticateToken, (req, res) => {
+router.post("/logout", authenticateToken, async (req, res) => {
+    var refreshTokens = [];
+    refreshTokens = getRefreshTokensArray();
     const refreshToken = req.body.token;
     setRefreshTokensArray(refreshTokens.filter(token => token !== refreshToken));
     res.status(200).json("You logged out successfully");

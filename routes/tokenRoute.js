@@ -21,11 +21,14 @@ router.post("/refresh", async (req, res) => {
     // ERRORS
     if(!refreshToken) return res.status(401).json("You are not authenticated (1)");
     if(!refreshTokensArray.includes(refreshToken)) {
-        return res.status(403).json("Refresh token is not valid")
+        console.log(refreshTokensArray);
+
+        return res.status(403).json(`Refresh token is not valid. Token: ${refreshToken}`);
     }
 
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, payload) => {
         if (err) {
+
             return res.status(401).json("You are not authenticated (2)");
         }
         setRefreshTokensArray(refreshTokensArray.filter(token => token !== refreshToken));

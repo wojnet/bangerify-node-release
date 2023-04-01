@@ -16,6 +16,10 @@ const setRefreshTokensArray = (_array) => {
     refreshTokens = _array;
 }
 
+const getRefreshTokensArray = async () => {
+    return refreshTokens;
+}
+
 //MIDDLEWARE FOR ENDPOINTS THAT NEEDS USER AUTHENTICATION (LIKE DELETE POST)
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -35,3 +39,4 @@ module.exports.refreshTokens = refreshTokens;
 module.exports.generateAccessToken = generateAccessToken;
 module.exports.generateRefreshToken = generateRefreshToken;
 module.exports.setRefreshTokensArray = setRefreshTokensArray;
+module.exports.getRefreshTokensArray = getRefreshTokensArray;

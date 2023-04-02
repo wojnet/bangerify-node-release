@@ -10,6 +10,7 @@ AWS.config.update({
 });
 
 const mediaBucketName = "bangerify-media";
+// const profilePictureBucketName = "bangerify-profile-pictures";
 
 const mediaBucket = new AWS.S3({
     region: "eu-central-1",
@@ -17,6 +18,13 @@ const mediaBucket = new AWS.S3({
     secretAccessKey: process.env.aws_secret_access_key_media,
     signatureVersion: 'v4'
 });
+
+// const profilePictureBucket = new AWS.S3({
+//     region: "eu-central-1",
+//     accessKeyId: process.env.aws_access_key_id_media,
+//     secretAccessKey: process.env.aws_secret_access_key_media,
+//     signatureVersion: 'v4'
+// });
 
 const generateUploadURL = async () => {
     const rawBytes = crypto.randomBytes(16);
@@ -64,6 +72,21 @@ const deleteS3File = async (_file = "") => {
 
     return "DELETED";
 }
+
+// const deleteS3ProfilePicture = async (_file = "") => {
+//     const params = ({
+//         Bucket: profilePictureBucketName,
+//         Key: _file
+//     });
+
+//     mediaBucket.deleteObject(params, (error, data) => {
+//         if (error) {
+//             return "ERROR";
+//         }
+//     });
+
+//     return "DELETED";
+// }
 
 module.exports.mediaBucket = mediaBucket;
 module.exports.generateUploadURL = generateUploadURL;

@@ -43,10 +43,9 @@ router.get("/getMostLikedPostsList", async (req, res) => {
 //? GET POSTS BY ID ARRAY
 router.post("/getPostsById", async (req, res) => {
     const { list } = req.body;
-    console.log(req.headers.host, list);
 
-    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id IN (${ list.length ? [list.join(",")] : "999999999" }) LIMIT 20;`;
-    console.log(query);
+    const arg = list.length ? [list.join(",")] : "999999999";
+    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id IN(${arg}) ORDER BY FIND_IN_SET(posts.id, '${arg}') LIMIT 20;`;
 
     try {
         const result = await getQueryResult(query);

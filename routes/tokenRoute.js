@@ -31,7 +31,7 @@ router.post("/refresh", async (req, res) => {
 
             return res.status(401).json("You are not authenticated (2)");
         }
-        setRefreshTokensArray(refreshTokensArray.filter(token => token !== refreshToken));
+        setRefreshTokensArray([...refreshTokensArray].filter(token => token !== refreshToken));
         
         const newAccessToken = generateAccessToken(payload.id, payload.username, payload.grade);
         const newRefreshToken = generateRefreshToken(payload.id, payload.username, payload.grade);

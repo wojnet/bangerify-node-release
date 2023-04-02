@@ -202,9 +202,9 @@ router.post("/login", async (req, res) => {
 //? LOGOUT
 router.post("/logout", authenticateToken, async (req, res) => {
     var refreshTokens = [];
-    refreshTokens = getRefreshTokensArray();
+    refreshTokens = await getRefreshTokensArray();
     const refreshToken = req.body.token;
-    setRefreshTokensArray(refreshTokens.filter(token => token !== refreshToken));
+    setRefreshTokensArray([...refreshTokens].filter(token => token !== refreshToken));
     res.status(200).json("You logged out successfully");
     res.end();
 });

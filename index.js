@@ -21,7 +21,7 @@ const postsRouter = require("./routes/postsRoute");
 const AWSRouter = require("./routes/AWSRoute");
 const likesRouter = require("./routes/likesRoute");
 const commentsRouter = require("./routes/commentsRoute");
-const weirdRouter = require("./routes/weirdRoute");
+const testRouter = require("./routes/testRoute");
 app.use("/api/auth", authRouter);
 app.use("/api/token", tokenRouter);
 app.use("/api/confirmation", confirmationRouter);
@@ -30,7 +30,7 @@ app.use("/api", postsRouter);
 app.use("/api", AWSRouter);
 app.use("/api", likesRouter);
 app.use("/api", commentsRouter);
-app.use("/api", weirdRouter);
+app.use("/api/test", testRouter);
 
 // LISTEN
 app.listen(8080, () => {

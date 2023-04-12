@@ -14,6 +14,11 @@ router.post("/commentPost", authenticateToken, async (req, res) => {
     const { postId, text } = req.body;
     const { id } = req.payload;
 
+    const canComment = await getQueryResult("SELECT canComment FROM posts WHERE id = ? LIMIT 1;", [postId]);
+    if (canComment[0].canComment == 0) {
+        return res.json("adding comments blocked");
+    }
+
     pool.query(`INSERT INTO comments (text, userId, postId) VALUES (?, ?, ?);`, [text, id, postId], error => {
         if (error) console.log(error);
     });

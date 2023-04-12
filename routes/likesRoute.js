@@ -2,6 +2,7 @@
 //TODO: CHANGE IT SOMEDAY
 
 const express = require("express");
+const jwt = require("jsonwebtoken");
 // const path = require("path");
 // const dotenv = require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
@@ -33,17 +34,40 @@ router.post("/setLike", authenticateToken, async (req, res) => {
     res.end();
 });
 
-//? SET LIKES
+//? (NEW!) LOAD LIKES
 router.post("/loadLikes", async (req, res) => {
-    const { postId } = req.body;
+    const { postId, token } = req.body;
 
-    pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
-        if (error) console.log(error);
-        res.json({ 
-            likes: result[0]?.likes
+    const auth = await new Promise(resolve => {
+        jwt.verify(token ? token : "", process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
+            if (err) {
+                resolve({ isAuthenticated: false });
+            } else {
+                resolve({ isAuthenticated: true, id: payload.id });
+            }
         });
-        res.end;
-    });
+    })
+
+    if (auth.isAuthenticated) {
+        const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [auth.id, postId]);
+
+        pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
+            if (error) console.log(error);
+            res.json({ 
+                likes: result[0]?.likes,
+                liked: userLiked[0]?.count
+            });
+            res.end;
+        });
+    } else {
+        pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
+            if (error) console.log(error);
+            res.json({ 
+                likes: result[0]?.likes
+            });
+            res.end;
+        });
+    }
 });
 
 //? SET LIKES BUT WHEN YOU'RE LOGGED IN

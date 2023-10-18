@@ -13,13 +13,24 @@ const router = express.Router();
 
 //? GET POSTS
 router.post("/getPosts", async (req, res) => {
-    const { lastPostId } = req.body;
+    const { lastPostId, count, withLikes } = req.body;
 
-    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT 15;`;
+    let finalCount = count ? count : 15;
+    var query = `SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? ORDER BY posts.id DESC LIMIT ?;`;
 
     try {
-        const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999]);
-        res.json(result);
+        let posts = await getQueryResult(query, [lastPostId ? lastPostId : 9999999, finalCount]);
+        posts = posts.map(e => {
+            let tempObject = e;
+            tempObject.images = tempObject.images == null ? "[]" : tempObject.images;
+            return tempObject;
+        });
+        res.json({
+            posts: {
+                ...posts
+            },
+            postsEnded: posts.length < finalCount ? true : false
+        });
     } catch (error) {
         console.log(error);
         res.sendStatus(500);
@@ -58,13 +69,22 @@ router.post("/getPostsById", async (req, res) => {
 
 //? GET USER POSTS
 router.post("/getUserPosts", async (req, res) => {
-    const { lastPostId, author } = req.body;
+    const { lastPostId, author, count } = req.body;
 
-    var query = "SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT 50;";
+    let finalCount = count ? count : 15;
+    var query = "SELECT posts.id, posts.text, posts.date, posts.images, users.id AS userId, users.username, users.visible_name, users.profilePictureUrl, users.grade FROM posts INNER JOIN users ON posts.author = users.id WHERE posts.id < ? AND users.username = ? ORDER BY posts.id DESC LIMIT ?;";
 
     try {
-        const result = await getQueryResult(query, [lastPostId ? lastPostId : 9999999, author]);
-        res.json(result);
+        const posts = await getQueryResult(query, [lastPostId ? lastPostId : 9999999, author, finalCount]);
+        posts.map(e => {
+            let tempObject = e;
+            tempObject.images = tempObject.images == null ? "[]" : tempObject.images;
+            return tempObject;
+        });
+        res.json({
+            posts: posts,
+            postsEnded: posts.length < finalCount ? true : false
+        });
     } catch(error) {
         console.log(error);
         res.sendStatus(500);
@@ -74,15 +94,13 @@ router.post("/getUserPosts", async (req, res) => {
 //? CREATE POST
 router.post("/createPost", authenticateToken, async (req, res) => {
 
-    const { postData, images } = req.body;
+    const { newPostData, images } = req.body;
     const imagesArrayString = JSON.stringify(images);
-
-    console.log(images);
 
     pool.getConnection((error, connection) => {
         if(error) throw error;
 
-        connection.query(`INSERT INTO posts (author, text, images) VALUES (?, ?, '${imagesArrayString}');`, [req.payload.id, postData.post], err => {
+        connection.query(`INSERT INTO posts (author, text, images) VALUES (?, ?, '${imagesArrayString}');`, [req.payload.id, newPostData.post], err => {
             if(err) {
                 console.log(err);
             }

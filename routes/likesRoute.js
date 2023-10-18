@@ -34,7 +34,7 @@ router.post("/setLike", authenticateToken, async (req, res) => {
     res.end();
 });
 
-//? (NEW!) LOAD LIKES
+//? LOAD LIKES
 router.post("/loadLikes", async (req, res) => {
     const { postId, token } = req.body;
 
@@ -67,6 +67,65 @@ router.post("/loadLikes", async (req, res) => {
             });
             res.end;
         });
+    }
+});
+
+router.post("/loadLikesFromArray", async (req, res) => {
+    const { token } = req.body;
+    const postIdArray = req.body.postIdArray || [];
+
+    if (!Array.isArray(postIdArray) || !postIdArray) {
+        res.sendStatus(400); // 400 - BAD REQUEST
+        res.end;
+    }
+
+    const auth = await new Promise(resolve => {
+        jwt.verify(token ? token : "", process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
+            if (err) {
+                resolve({ isAuthenticated: false });
+            } else {
+                resolve({ isAuthenticated: true, id: payload.id });
+            }
+        });
+    })
+
+    let likesData = {
+        message: "",
+        data: []
+    };
+
+    if (auth.isAuthenticated) {
+        for (const postId of postIdArray) {
+            const likes = await getQueryResult(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
+            const userLiked = await getQueryResult(`SELECT COUNT(id) AS liked FROM likes WHERE userId = ? AND postId = ? LIMIT 256;`, [auth.id, postId]);
+
+            likesData.data.push({
+                postId: postId,
+                likes: likes[0]?.likes,
+                liked: userLiked[0]?.liked
+            });
+        }
+        
+        likesData.message = "AUTHENTICATED";
+
+        res.json(likesData);
+        res.end;
+
+    } else {
+        for (const postId of postIdArray) {
+            const likes = await getQueryResult(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
+
+            likesData.data.push({
+                postId: postId,
+                likes: likes[0]?.likes,
+                liked: 0
+            });
+        }
+
+        likesData.message = "NOT AUTHENTICATED";
+
+        res.json(likesData);
+        res.end;
     }
 });
 

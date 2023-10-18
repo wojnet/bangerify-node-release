@@ -17,6 +17,7 @@ router.post("/userData/:username", async (req, res) => {
 
     try {
         const result = await getQueryResult(`SELECT visible_name, bio, grade, creationDate, profilePictureUrl FROM users WHERE username = ?`, [username]);
+        if (result.length <= 0) return res.sendStatus(404);
         res.json(result);
     } catch(error) {
         console.log(error);

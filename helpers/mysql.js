@@ -10,7 +10,8 @@ const pool = mysql.createPool({
     database: process.env.DB_DATABASE,
     debug: false,
     timezone: "UTC",
-    multipleStatements: false
+    multipleStatements: false,
+    charset: "utf8mb4"
 });
 
 pool.on('connection', connection => {

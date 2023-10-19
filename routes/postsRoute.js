@@ -100,7 +100,7 @@ router.post("/createPost", authenticateToken, async (req, res) => {
     query(`INSERT INTO posts (author, text, images) VALUES (?, ?, '${imagesArrayString}');`, [req.payload.id, newPostData.post])
         .catch(err => {
             console.log("Error in postsRoute -> /createPost endpoint:" + err);
-            res.json("POST NOT CREATED:" + err);
+            res.json("POST NOT CREATED");
             return res.end();
         })
 
@@ -153,7 +153,7 @@ router.post("/savePost", authenticateToken, async (req, res) => {
         await query("UPDATE posts SET text = ? WHERE id = ? LIMIT 1;", [text, postId])
             .catch(err => {
                 console.log("Error in postsRoute -> /savePost endpoint:" + err);
-                res.json("POST NOT UPDATED:" + err);
+                res.json("POST NOT UPDATED:");
                 return res.end();
             });
     }

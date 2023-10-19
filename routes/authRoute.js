@@ -51,6 +51,7 @@ router.post("/register", (req, res) => {
     if (!emailValidator.validate(email)) isEmailValid = false; // VALIDATE EMAIL
     if (!passwordRegex.test(password)) isPasswordValid = false; // VALIDATE PASSWORD
 
+    // IF AT LEAST ONE IS NOT VALID
     if (!isUsernameValid || !isEmailValid || !isPasswordValid) {
         res.json({
             message: "validation error",
@@ -58,70 +59,68 @@ router.post("/register", (req, res) => {
             isEmailValid: isEmailValid,
             isPasswordValid: isPasswordValid
         });
-        res.end();
-
-    } else {
-
-        // CHECK IF USER OR EMAIL EXISTS
-        pool.getConnection((error, connection) => {
-            if(error) throw error;
-
-            connection.query("SELECT username, email FROM users WHERE username = ? OR email = ?", [username, email], (err, result) => {
-                if (err) {
-                    res.sendStatus(401);
-                } else {
-                    if (Array.from(result).length === 0) {
-                        pool.getConnection((error2, connection2) => {
-                            if(error2) throw error2;
-
-                            const password_salt = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-                            const password_hash = crypto.createHash("sha256").update(password+password_salt, "utf-8").digest("hex");
-                    
-                            connection2.query("INSERT INTO users(username, visible_name, email, confirmedEmail, password_hash, password_salt, grade) VALUES (?, ?, ?, 0, ?, ?, 0);", [username, username, email, password_hash, password_salt], (err2, result2) => {
-                                if (err2) {
-                                    console.log("ERROR ON AUTH.JS => err2", err2);
-                                    res.json("MYSQL QUERY ERROR");
-                                    res.end();
-                    
-                                } else {
-                                    // CREATE EMAIL TOKEN & SEND IT TO USER'S MAIL
-                                    jwt.sign({ username: username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
-                                        const url = `http://3.71.193.242:8080/api/confirmation/${emailToken}`;
-                                        sendEmail(email, url);
-                                    });
-
-                                    res.json({
-                                        message: "account created",
-                                    });
-                                    res.end();
-                                }
-                                connection2.release();
-                            });
-                        });
-                    
-                    } else {
-                        
-                        // CANNOT CREATE ACCOUNT
-                        let usernameExist = false;
-                        let emailExist = false;
-
-                        result.forEach((e) => {
-                            if (e.username === username) usernameExist = true;
-                            if (e.email === email) emailExist = true;
-                        });
-
-                        res.json({
-                            message: "username or email exist",
-                            usernameExist: usernameExist,
-                            emailExist: emailExist
-                        });
-                        res.end();
-                    }
-                }
-            });
-            connection.release();
-        });
+        return res.end();
     }
+
+    // CHECK IF USER OR EMAIL EXISTS
+    pool.getConnection((error, connection) => {
+        if(error) throw error;
+
+        connection.query("SELECT username, email FROM users WHERE username = ? OR email = ?", [username, email], (err, result) => {
+            if (err) {
+                res.sendStatus(401);
+            } else {
+                if (Array.from(result).length === 0) {
+                    pool.getConnection((error2, connection2) => {
+                        if(error2) throw error2;
+
+                        const password_salt = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                        const password_hash = crypto.createHash("sha256").update(password+password_salt, "utf-8").digest("hex");
+                
+                        connection2.query("INSERT INTO users(username, visible_name, email, confirmedEmail, password_hash, password_salt, grade) VALUES (?, ?, ?, 0, ?, ?, 0);", [username, username, email, password_hash, password_salt], (err2, result2) => {
+                            if (err2) {
+                                console.log("ERROR ON AUTH.JS => err2", err2);
+                                res.json("MYSQL QUERY ERROR");
+                                res.end();
+                
+                            } else {
+                                // CREATE EMAIL TOKEN & SEND IT TO USER'S MAIL
+                                jwt.sign({ username: username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
+                                    const url = `${process.env.BACKEND_SERVER}/api/confirmation/${emailToken}`;
+                                    sendEmail(email, url);
+                                });
+
+                                res.json({
+                                    message: "account created",
+                                });
+                                res.end();
+                            }
+                            connection2.release();
+                        });
+                    });
+                
+                } else {
+                    
+                    // CANNOT CREATE ACCOUNT
+                    let usernameExist = false;
+                    let emailExist = false;
+
+                    result.forEach((e) => {
+                        if (e.username === username) usernameExist = true;
+                        if (e.email === email) emailExist = true;
+                    });
+
+                    res.json({
+                        message: "username or email exist",
+                        usernameExist: usernameExist,
+                        emailExist: emailExist
+                    });
+                    res.end();
+                }
+            }
+        });
+        connection.release();
+    });
 });
 
 //? LOGIN

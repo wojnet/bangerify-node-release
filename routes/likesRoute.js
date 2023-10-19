@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 // const path = require("path");
 // const dotenv = require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-const { getQueryResult, pool } = require("../helpers/mysql");
+const { query, pool } = require("../helpers/mysql");
 const { authenticateToken } = require("../helpers/JWT");
 
 const router = express.Router();
@@ -15,18 +15,18 @@ const router = express.Router();
 router.post("/setLike", authenticateToken, async (req, res) => {
     const { postId } = req.body;
     const { id } = req.payload;
-    var query;
+    var setLikeQuery;
     
     // CHECK IF USER LIKED OR DISLIKED
-    const result = await getQueryResult(`SELECT id FROM likes WHERE postId = ? AND userId = ? LIMIT 1;`, [postId, id]);
+    const result = await query(`SELECT id FROM likes WHERE postId = ? AND userId = ? LIMIT 1;`, [postId, id]);
 
     if (result.length === 0) {
-        query = `INSERT INTO likes(userId, postId) values (?, ?);`; // JUST LIKED
+        setLikeQuery = `INSERT INTO likes(userId, postId) values (?, ?);`; // JUST LIKED
     } else {
-        query = `DELETE FROM likes WHERE userId = ? AND postId = ? LIMIT 1`; // JUST DISLIKED
+        setLikeQuery = `DELETE FROM likes WHERE userId = ? AND postId = ? LIMIT 1`; // JUST DISLIKED
     }
 
-    pool.query(query, [id, postId], (error) => {
+    pool.query(setLikeQuery, [id, postId], (error) => {
         if (error) console.log(error);
     });
 
@@ -49,7 +49,7 @@ router.post("/loadLikes", async (req, res) => {
     })
 
     if (auth.isAuthenticated) {
-        const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [auth.id, postId]);
+        const userLiked = await query(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [auth.id, postId]);
 
         pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
             if (error) console.log(error);
@@ -96,8 +96,8 @@ router.post("/loadLikesFromArray", async (req, res) => {
 
     if (auth.isAuthenticated) {
         for (const postId of postIdArray) {
-            const likes = await getQueryResult(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
-            const userLiked = await getQueryResult(`SELECT COUNT(id) AS liked FROM likes WHERE userId = ? AND postId = ? LIMIT 256;`, [auth.id, postId]);
+            const likes = await query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
+            const userLiked = await query(`SELECT COUNT(id) AS liked FROM likes WHERE userId = ? AND postId = ? LIMIT 256;`, [auth.id, postId]);
 
             likesData.data.push({
                 postId: postId,
@@ -113,7 +113,7 @@ router.post("/loadLikesFromArray", async (req, res) => {
 
     } else {
         for (const postId of postIdArray) {
-            const likes = await getQueryResult(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
+            const likes = await query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId]);
 
             likesData.data.push({
                 postId: postId,
@@ -135,7 +135,7 @@ router.post("/loadLikesAuth", authenticateToken, async (req, res) => {
     const { postId } = req.body;
     const { id } = req.payload;
 
-    const userLiked = await getQueryResult(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [id, postId]);
+    const userLiked = await query(`SELECT COUNT(id) AS count FROM likes WHERE userId = ? AND postId = ? LIMIT 1;`, [id, postId]);
 
     pool.query(`SELECT COUNT(id) AS likes FROM likes WHERE postId = ?;`, [postId], (error, result) => {
         if (error) console.log(error);

@@ -5,7 +5,7 @@ const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-const { getQueryResult, pool } = require("../helpers/mysql");
+const { query, pool } = require("../helpers/mysql");
 const { authenticateToken } = require("../helpers/JWT");
 const { deleteS3File } = require("../helpers/AWS");
 
@@ -15,8 +15,10 @@ const router = express.Router();
 router.post("/userData/:username", async (req, res) => {
     const username = req.params.username;
 
+    const getUserDataQuery = "SELECT visible_name, bio, grade, creationDate, profilePictureUrl FROM users WHERE username = ?";
+
     try {
-        const result = await getQueryResult(`SELECT visible_name, bio, grade, creationDate, profilePictureUrl FROM users WHERE username = ?`, [username]);
+        const result = await query(getUserDataQuery, [username]);
         if (result.length <= 0) return res.sendStatus(404);
         res.json(result);
     } catch(error) {
@@ -31,10 +33,13 @@ router.post("/changeBio", authenticateToken, async (req, res) => {
     const author = req.payload.id;
     var message = "done";
 
-    const result = await getQueryResult("SELECT banStatus FROM users WHERE id = ? LIMIT 1;", [author]);
+    const getBanStatusQuery = "SELECT banStatus FROM users WHERE id = ? LIMIT 1;";
+    const changeBioQuery = "UPDATE users SET bio = ? WHERE id = ? LIMIT 1;";
+
+    const result = await query(getBanStatusQuery, [author]);
 
     if (result[0].banStatus === 0) {
-        pool.query(`UPDATE users SET bio = ? WHERE id = ? LIMIT 1;`, [newBio, author], (error) => {
+        pool.query(changeBioQuery, [newBio, author], (error) => {
             if (error) message = "error";
         });
     } else {
@@ -53,13 +58,16 @@ router.post("/changeProfilePictureUrl", authenticateToken, async (req, res) => {
     const author = req.payload.id;
     var errors = false;
 
-    const imageResult = await getQueryResult("SELECT profilePictureUrl FROM users WHERE id = ? LIMIT 1;", [author]);
+    const imageResultQuery = "SELECT profilePictureUrl FROM users WHERE id = ? LIMIT 1;";
+    const changeProfilePictureUrlQuery = "UPDATE users SET profilePictureUrl = ? WHERE id = ? LIMIT 1;";
+
+    const imageResult = await query(imageResultQuery, [author]);
     if (imageResult[0].profilePictureUrl !== null && imageResult[0].profilePictureUrl !== "") {
         const imageKey = imageResult[0].profilePictureUrl.split(".com/")[1];
-        /* const deletedResult = */ await deleteS3File(imageKey);
+        await deleteS3File(imageKey);
     }
 
-    pool.query(`UPDATE users SET profilePictureUrl = ? WHERE id = ? LIMIT 1;`, [newURL, author], (error) => {
+    pool.query(changeProfilePictureUrlQuery, [newURL, author], (error) => {
         if (error) errors = true;
     });
 
@@ -75,8 +83,10 @@ router.post("/changeVisibleName", authenticateToken, async (req, res) => {
     const author = req.payload.id;
     var errors = false;
 
+    const changeVisibleNameQuery = "UPDATE users SET visible_name = ? WHERE id = ? LIMIT 1;";
+
     if (newVisibleName !== "") {
-        pool.query(`UPDATE users SET visible_name = ? WHERE id = ? LIMIT 1;`, [newVisibleName, author], (error) => {
+        pool.query(changeVisibleNameQuery, [newVisibleName, author], (error) => {
             if (error) errors = true;
         });
     }

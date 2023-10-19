@@ -5,7 +5,8 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const dotenv = require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-const { pool, getQueryResult } = require("../helpers/mysql");
+const { pool, query } = require("../helpers/mysql");
+const { sendEmail } = require("../helpers/email");
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ router.get("/:token", (req, res) => {
                 });
             });
 
-            res.redirect(process.env.DEV_APP_SERVER);
+            res.redirect(`${process.env.DEV_APP_SERVER}/authenticate`);
             res.end();
         } else {
             res.json("BAD TOKEN");
@@ -61,17 +62,29 @@ router.post("/resendVerificationToken", async (req, res) => {
     const { email } = req.body;
 
     // CHECK IF EMAIL IS ASSIGNED TO SOME UNVERIFIED ACCOUNT
-    const query = `SELECT username FROM users WHERE email = ? AND confirmedEmail = 0 LIMIT 1;`;
-    const result = await getQueryResult(query, [email]);
-    if (result.length !== 0) {
-        
-        jwt.sign({ username: result[0]?.username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
+    const resendVerificationTokenQuery = `SELECT username FROM users WHERE email = ? AND confirmedEmail = 0 LIMIT 1;`;
+    const result = await query(resendVerificationTokenQuery, [email])
+        .catch(err => {
+            console.log("Error in confirmationRoute -> /resendVerificationToken api:" + err);
+            res.json("ERROR");
+            res.end();
+        });
 
-            const url = `http://3.71.193.242:8080/api/confirmation/${emailToken}`;
+    if (result.length !== 0) {
+        jwt.sign({ username: result[0]?.username }, process.env.EMAIL_TOKEN_SECRET, (err, emailToken) => {
+            if (err) {
+                res.sendStatus(500);
+                res.end();
+            }
+
+            const url = `${process.env.BACKEND_SERVER}/api/confirmation/${emailToken}`;
             sendEmail(email, url);
             res.json("EMAIL RESENT");
             res.end();
         });
+    } else {
+        res.json("EMAIL NOT SENT");
+        res.end();
     }
 });
 

@@ -21,7 +21,7 @@ pool.on('connection', connection => {
     });
 });
 
-const getQueryResult = (_query, _arr = []) => {
+const query = (_query, _arr = []) => {
     return new Promise((resolve, reject) => {
         pool.query(_query, [..._arr], (error, result) => {
             if (error) {
@@ -33,4 +33,4 @@ const getQueryResult = (_query, _arr = []) => {
 }
 
 module.exports.pool = pool;
-module.exports.getQueryResult = getQueryResult;
+module.exports.query = query;
